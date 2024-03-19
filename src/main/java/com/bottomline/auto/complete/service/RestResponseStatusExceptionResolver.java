@@ -1,49 +1,37 @@
 package com.bottomline.auto.complete.service;
 
-import java.util.HashMap;
+
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-import javax.validation.ConstraintViolation;
-import javax.validation.ConstraintViolationException;
-
+import javax.validation.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
 
 @RestControllerAdvice
-public class RestResponseStatusExceptionResolver extends ResponseEntityExceptionHandler {
-	
-	Logger logger = LoggerFactory.getLogger(this.getClass());
+public class RestResponseStatusExceptionResolver {
 
-    /*
-     * Exception handler for REST controllers defined in the application.
-     * Should an validation exception be thrown from one of the controllers, this method will be invoked
-     * with the URI and the exception causing the error
-     */
-    @ExceptionHandler(ConstraintViolationException.class)
-    @ResponseStatus(value = HttpStatus.BAD_REQUEST)
-    public Map<String, String> handleConstraintViolationException(ConstraintViolationException ex) {
-        Set<ConstraintViolation<?>> constraintViolations = ex.getConstraintViolations();
-        
-        Map<String, String> fieldException = new HashMap<>();
-        constraintViolations.stream().forEach(e -> {
-        	fieldException.put("Status", HttpStatus.BAD_REQUEST.toString() + " - " + HttpStatus.BAD_REQUEST.getReasonPhrase());
-            fieldException.put("Message", e.getMessage());
-            String argVal = Objects.requireNonNullElse(e.getInvalidValue(), "").toString(); 
-            if(argVal != null) {
-            	fieldException.put("Value", e.getInvalidValue().toString());            	
-            }
-            logger.info(e.getMessage() + " for value: " + argVal);
-            logger.error("Error for request param", ex);
-        });
-        return fieldException;
-    }
+    Logger logger = LoggerFactory.getLogger(this.getClass());
     
+    @ExceptionHandler(ValidationException.class)
+    @ResponseBody
+    protected ResponseEntity<Map<String, String>> handleValidationException(ValidationException ex, WebRequest request) {
+        Map<String, String> errorResponse = Map.of("Invalid request", ex.getMessage());
+        logger.info("Invalid arguments received for request: " + request.getDescription(false));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseBody
+    protected ResponseEntity<Map<String, String>> handleAllExceptions(Exception ex, WebRequest request) {
+        Map<String, String> errorResponse = Map.of("Error", "An unexpected error occurred, contact support for further details");
+        logger.error("Internal error occurred during processing of request for : " + request.getDescription(false), ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
 
 }
