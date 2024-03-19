@@ -16,6 +16,7 @@ import org.springframework.web.context.request.WebRequest;
 public class RestResponseStatusExceptionResolver {
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
+    final Map<String, String> DEFAULT_ERROR_MAP = Map.of("Error", "An unexpected error occurred, contact support for further details");
     
     @ExceptionHandler(ValidationException.class)
     @ResponseBody
@@ -27,10 +28,9 @@ public class RestResponseStatusExceptionResolver {
 
     @ExceptionHandler(Exception.class)
     @ResponseBody
-    protected ResponseEntity<Map<String, String>> handleAllExceptions(Exception ex, WebRequest request) {
-        Map<String, String> errorResponse = Map.of("Error", "An unexpected error occurred, contact support for further details");
+    protected ResponseEntity<Map<String, String>> handleAllExceptions(Exception ex, WebRequest request) {        
         logger.error("Internal error occurred during processing of request for : " + request.getDescription(false), ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(DEFAULT_ERROR_MAP);
     }
 
 
